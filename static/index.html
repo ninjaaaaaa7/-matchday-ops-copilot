@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MatchDay Ops Copilot - FIFA World Cup 2026</title>
+    <meta
+      name="description"
+      content="GenAI decision-support assistant for FIFA World Cup 2026 stadium operations staff."
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <!-- Skip link lets keyboard and screen-reader users jump past the header. -->
+    <a class="skip-link" href="#main">Skip to main content</a>
+
+    <header class="site-header">
+      <h1>MatchDay Ops Copilot</h1>
+      <p class="tagline">Real-time decision support for stadium operations - FIFA World Cup 2026</p>
+      <p id="mode-badge" class="badge" role="status" aria-live="polite">Checking status…</p>
+    </header>
+
+    <main id="main" class="layout">
+      <!-- Left column: live situation and the ranked assessment. -->
+      <section class="panel" aria-labelledby="situation-heading">
+        <h2 id="situation-heading">Live situation</h2>
+        <dl id="match-summary" class="summary" aria-live="polite">
+          <div><dt>Stadium</dt><dd id="s-stadium">-</dd></div>
+          <div><dt>Fixture</dt><dd id="s-fixture">-</dd></div>
+          <div><dt>Kickoff in</dt><dd id="s-kickoff">-</dd></div>
+          <div><dt>Weather</dt><dd id="s-weather">-</dd></div>
+          <div><dt>Overall risk</dt><dd id="s-risk">-</dd></div>
+        </dl>
+
+        <h3>Zones by priority</h3>
+        <div id="zones" class="zones" aria-live="polite">
+          <p>Loading sample stadium…</p>
+        </div>
+      </section>
+
+      <!-- Right column: ask the copilot. -->
+      <section class="panel" aria-labelledby="copilot-heading">
+        <h2 id="copilot-heading">Ask the copilot</h2>
+        <form id="copilot-form" novalidate>
+          <div class="field">
+            <label for="question">Your question</label>
+            <textarea
+              id="question"
+              name="question"
+              rows="3"
+              maxlength="500"
+              required
+              aria-describedby="question-help"
+            >What should I prioritise right now?</textarea>
+            <p id="question-help" class="help">
+              Ask in any language - the copilot replies in the language you choose.
+            </p>
+          </div>
+
+          <div class="field">
+            <label for="language">Reply language</label>
+            <select id="language" name="language">
+              <option value="English" selected>English</option>
+              <option value="Spanish">Spanish</option>
+              <option value="French">French</option>
+              <option value="Arabic">Arabic</option>
+              <option value="Portuguese">Portuguese</option>
+              <option value="Hindi">Hindi</option>
+            </select>
+          </div>
+
+          <button type="submit" id="ask-btn">Ask copilot</button>
+        </form>
+
+        <h3>Copilot response</h3>
+        <div
+          id="answer"
+          class="answer"
+          role="region"
+          aria-label="Copilot response"
+          aria-live="polite"
+          tabindex="0"
+        >
+          <p>The copilot's answer will appear here.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Demo project for Hack2skill Prompt Wars - Challenge 4. Runs in demo mode
+        without an API key; set <code>GEMINI_API_KEY</code> for live AI responses.
+      </p>
+    </footer>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
