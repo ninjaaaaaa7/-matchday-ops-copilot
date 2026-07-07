@@ -79,6 +79,17 @@ def _demo_answer(assessment: StadiumAssessment, question: str, language: str) ->
     return "\n".join(parts)
 
 
+# A single reusable HTTP client with connection pooling. Reusing one client
+# avoids opening a new TCP/TLS connection on every request, which is the main
+# efficiency win when the copilot is queried repeatedly during a match.
+_client = httpx.Client(timeout=settings.request_timeout)
+
+
+def close_client() -> None:
+    """Release the shared HTTP client (called on application shutdown)."""
+    _client.close()
+
+
 def _call_gemini(prompt: str) -> str:
     """Call the Gemini REST API and return the generated text."""
     url = f"{settings.gemini_base_url}/models/{settings.gemini_model}:generateContent"
@@ -87,11 +98,10 @@ def _call_gemini(prompt: str) -> str:
         # Low temperature keeps operational guidance stable and repeatable.
         "generationConfig": {"temperature": 0.3, "maxOutputTokens": 512},
     }
-    response = httpx.post(
+    response = _client.post(
         url,
         params={"key": settings.gemini_api_key},
         json=payload,
-        timeout=settings.request_timeout,
     )
     response.raise_for_status()
     data = response.json()

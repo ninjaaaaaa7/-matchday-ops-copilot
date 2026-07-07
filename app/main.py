@@ -4,13 +4,14 @@ Exposes a small, well-defined REST API and serves the accessible single-page
 operations dashboard from the ``static`` directory.
 """
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .ai_assistant import run_copilot
+from .ai_assistant import close_client, run_copilot
 from .config import settings
 from .context_engine import assess_stadium
 from .models import (
@@ -25,10 +26,19 @@ from .sample_data import sample_state
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage startup/shutdown; release the shared HTTP client on exit."""
+    yield
+    close_client()
+
+
 app = FastAPI(
     title="MatchDay Ops Copilot",
     description="GenAI decision-support assistant for FIFA World Cup 2026 stadium operations.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Serve the front-end assets (CSS/JS) under /static.

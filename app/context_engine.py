@@ -63,7 +63,9 @@ def _risk_level(risk_score: float) -> str:
     return "LOW"
 
 
-def _score_zone(zone: Zone, weather: str, minutes_to_kickoff: int):
+def _score_zone(
+    zone: Zone, weather: str, minutes_to_kickoff: int
+) -> tuple[float, float, float]:
     """Compute (density fraction, fans-per-steward, risk score) for one zone.
 
     The risk score is a weighted sum of independent, explainable factors so
@@ -106,7 +108,13 @@ def _score_zone(zone: Zone, weather: str, minutes_to_kickoff: int):
     return density_pct, stewards_ratio, risk
 
 
-def _recommend(zone, density_pct, density_tier, stewards_ratio, state) -> list:
+def _recommend(
+    zone: Zone,
+    density_pct: float,
+    density_tier: str,
+    stewards_ratio: float,
+    state: StadiumState,
+) -> list[str]:
     """Produce concrete, prioritised actions for a single zone.
 
     Rules run from most to least urgent so the first action listed is the one
@@ -171,7 +179,7 @@ def _recommend(zone, density_pct, density_tier, stewards_ratio, state) -> list:
     return actions
 
 
-def _highest_level(levels) -> str:
+def _highest_level(levels: list[str]) -> str:
     """Return the single worst risk level from a list (LOW if the list is empty)."""
     if not levels:
         return "LOW"

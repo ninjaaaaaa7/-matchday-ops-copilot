@@ -16,8 +16,10 @@ def test_build_prompt_contains_key_facts():
     assert "Respond in Spanish" in prompt
 
 
-def test_demo_mode_returns_grounded_answer():
-    # With no API key configured the pipeline uses the deterministic briefing.
+def test_demo_mode_returns_grounded_answer(monkeypatch):
+    # Force demo mode (no key) so the test is deterministic regardless of any
+    # GEMINI_API_KEY in the local environment.
+    monkeypatch.setattr(settings, "gemini_api_key", "")
     result = run_copilot(sample_state(), "What now?", "English")
     assert result.mode == "demo"
     assert result.assessment.fixture in result.answer
@@ -41,9 +43,9 @@ def test_live_mode_parses_model_response(monkeypatch):
     def fake_post(url, params=None, json=None, timeout=None):
         return FakeResponse()
 
-    # Enable live mode and swap the network call for our fake.
+    # Enable live mode and swap the pooled client's request method for our fake.
     monkeypatch.setattr(settings, "gemini_api_key", "test-key")
-    monkeypatch.setattr(ai_assistant.httpx, "post", fake_post)
+    monkeypatch.setattr(ai_assistant._client, "post", fake_post)
 
     result = run_copilot(sample_state(), "What now?", "English")
     assert result.mode == "live"
@@ -57,7 +59,7 @@ def test_live_mode_falls_back_on_error(monkeypatch):
         raise RuntimeError("network down")
 
     monkeypatch.setattr(settings, "gemini_api_key", "test-key")
-    monkeypatch.setattr(ai_assistant.httpx, "post", boom)
+    monkeypatch.setattr(ai_assistant._client, "post", boom)
 
     result = run_copilot(sample_state(), "What now?", "English")
     assert result.mode == "demo"

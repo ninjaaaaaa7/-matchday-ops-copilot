@@ -15,6 +15,8 @@ license: mit
 
 Hack2skill Prompt Wars - **Challenge 4: Smart Stadiums & Tournament Operations**.
 
+**🔗 Live demo:** https://ninjaaaaaaa7-matchday-ops-copilot.hf.space (Hugging Face Space)
+
 MatchDay Ops Copilot watches a live snapshot of a stadium (gate crowding, staffing,
 arrivals, incidents, weather, match clock), computes an **explainable risk assessment**
 for every zone, and lets operations staff ask questions in plain language - in any
@@ -32,6 +34,16 @@ assistance and accessibility built in.
 Operations staff on a World Cup matchday are flooded with signals from dozens of
 zones and have seconds to decide where to act. This assistant turns that raw state
 into a ranked priority list and answers natural-language questions about it.
+
+**How this maps to the challenge's named focus areas:**
+
+| Challenge focus area | How MatchDay Ops Copilot addresses it |
+|----------------------|----------------------------------------|
+| Real-time decision support | Ranked, per-zone risk with prioritised actions the moment a snapshot arrives |
+| Crowd management | Density tiers, over-capacity penalties, and arrivals-surge detection near kickoff |
+| Operational intelligence | A single explainable risk score per zone from five weighted factors |
+| Accessibility | Flags busy zones lacking step-free access; the UI itself meets WCAG AA |
+| Multilingual assistance | Staff can ask in any language and choose the reply language |
 
 ## 2. Approach and logic
 
