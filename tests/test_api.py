@@ -24,6 +24,15 @@ def test_sample_is_valid():
     assert len(body["zones"]) >= 1
 
 
+def test_dashboard_returns_state_and_assessment():
+    response = client.get("/api/dashboard")
+    assert response.status_code == 200
+    body = response.json()
+    # One request returns both the snapshot and its computed assessment.
+    assert body["state"]["zones"]
+    assert body["assessment"]["zones"]
+
+
 def test_assess_returns_ranked_zones():
     state = client.get("/api/sample").json()
     response = client.post("/api/assess", json=state)

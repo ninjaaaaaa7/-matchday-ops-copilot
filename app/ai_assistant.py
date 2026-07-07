@@ -79,26 +79,27 @@ def _demo_answer(assessment: StadiumAssessment, question: str, language: str) ->
     return "\n".join(parts)
 
 
-# A single reusable HTTP client with connection pooling. Reusing one client
-# avoids opening a new TCP/TLS connection on every request, which is the main
-# efficiency win when the copilot is queried repeatedly during a match.
-_client = httpx.Client(timeout=settings.request_timeout)
+# A single reusable async HTTP client with connection pooling. Using an async
+# client with a pooled connection means the outbound model call never blocks
+# the event loop and never reopens a connection per request - the efficient
+# pattern for an async web framework under concurrent match-day load.
+_client = httpx.AsyncClient(timeout=settings.request_timeout)
 
 
-def close_client() -> None:
+async def close_client() -> None:
     """Release the shared HTTP client (called on application shutdown)."""
-    _client.close()
+    await _client.aclose()
 
 
-def _call_gemini(prompt: str) -> str:
-    """Call the Gemini REST API and return the generated text."""
+async def _call_gemini(prompt: str) -> str:
+    """Call the Gemini REST API asynchronously and return the generated text."""
     url = f"{settings.gemini_base_url}/models/{settings.gemini_model}:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         # Low temperature keeps operational guidance stable and repeatable.
         "generationConfig": {"temperature": 0.3, "maxOutputTokens": 512},
     }
-    response = _client.post(
+    response = await _client.post(
         url,
         params={"key": settings.gemini_api_key},
         json=payload,
@@ -109,7 +110,9 @@ def _call_gemini(prompt: str) -> str:
     return data["candidates"][0]["content"]["parts"][0]["text"].strip()
 
 
-def run_copilot(state: StadiumState, question: str, language: str = "English") -> CopilotResponse:
+async def run_copilot(
+    state: StadiumState, question: str, language: str = "English"
+) -> CopilotResponse:
     """Run the full pipeline: assess the stadium, then answer the question.
 
     In live mode the model generates the answer; if the model is unavailable
@@ -127,7 +130,7 @@ def run_copilot(state: StadiumState, question: str, language: str = "English") -
 
     prompt = build_prompt(assessment, question, language)
     try:
-        answer = _call_gemini(prompt)
+        answer = await _call_gemini(prompt)
         mode = "live"
     except Exception:
         # Never fail the request because the model is slow or unreachable;

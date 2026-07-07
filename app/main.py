@@ -17,6 +17,7 @@ from .context_engine import assess_stadium
 from .models import (
     CopilotRequest,
     CopilotResponse,
+    DashboardResponse,
     StadiumAssessment,
     StadiumState,
 )
@@ -31,7 +32,7 @@ STATIC_DIR = BASE_DIR / "static"
 async def lifespan(app: FastAPI):
     """Manage startup/shutdown; release the shared HTTP client on exit."""
     yield
-    close_client()
+    await close_client()
 
 
 app = FastAPI(
@@ -67,6 +68,17 @@ def get_sample() -> StadiumState:
     return sample_state()
 
 
+@app.get("/api/dashboard", response_model=DashboardResponse)
+def get_dashboard() -> DashboardResponse:
+    """Return the sample snapshot and its assessment together.
+
+    The UI loads its initial view from this single endpoint instead of calling
+    /api/sample and /api/assess separately - one round trip instead of two.
+    """
+    state = sample_state()
+    return DashboardResponse(state=state, assessment=assess_stadium(state))
+
+
 @app.post("/api/assess", response_model=StadiumAssessment)
 def post_assess(state: StadiumState) -> StadiumAssessment:
     """Run the deterministic context engine on a stadium snapshot."""
@@ -74,6 +86,6 @@ def post_assess(state: StadiumState) -> StadiumAssessment:
 
 
 @app.post("/api/copilot", response_model=CopilotResponse)
-def post_copilot(req: CopilotRequest) -> CopilotResponse:
+async def post_copilot(req: CopilotRequest) -> CopilotResponse:
     """Answer a staff question, grounded in the computed assessment."""
-    return run_copilot(req.state, req.question, req.language)
+    return await run_copilot(req.state, req.question, req.language)

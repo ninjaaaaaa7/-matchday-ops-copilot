@@ -85,3 +85,10 @@ class CopilotResponse(BaseModel):
     assessment: StadiumAssessment
     answer: str
     mode: str  # "live" (real model) or "demo" (deterministic fallback)
+
+
+class DashboardResponse(BaseModel):
+    """A sample snapshot and its assessment, returned in a single request."""
+
+    state: StadiumState
+    assessment: StadiumAssessment

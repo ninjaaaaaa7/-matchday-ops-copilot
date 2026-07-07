@@ -88,15 +88,11 @@ function renderAssessment(assessment) {
   });
 }
 
-// Load the sample stadium and show its assessment on first paint.
-async function loadSample() {
-  currentState = await api("/api/sample");
-  const assessment = await api("/api/assess", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(currentState),
-  });
-  renderAssessment(assessment);
+// Load the sample stadium and its assessment in a single request on first paint.
+async function loadDashboard() {
+  const data = await api("/api/dashboard");
+  currentState = data.state;
+  renderAssessment(data.assessment);
 }
 
 // Handle the "Ask copilot" form submission.
@@ -145,7 +141,7 @@ async function onAsk(event) {
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("copilot-form").addEventListener("submit", onAsk);
   loadStatus();
-  loadSample().catch(function () {
+  loadDashboard().catch(function () {
     document.getElementById("zones").textContent =
       "Could not load the sample stadium. Is the backend running?";
   });
