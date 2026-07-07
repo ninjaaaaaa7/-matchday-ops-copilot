@@ -1,0 +1,11 @@
+# Keep the Docker build context small and free of secrets.
+.git
+.venv
+venv
+env
+__pycache__
+*.pyc
+.pytest_cache
+.env
+.vscode
+.idea

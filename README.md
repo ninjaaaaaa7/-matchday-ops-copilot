@@ -1,3 +1,14 @@
+---
+title: MatchDay Ops Copilot
+emoji: 🏟️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 # MatchDay Ops Copilot
 
 **A GenAI-enabled decision-support assistant for stadium operations staff during the FIFA World Cup 2026.**
