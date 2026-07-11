@@ -23,7 +23,7 @@ class Settings:
 
         # Model name is configurable so we never hard-code a single engine.
         # Swapping models is a deliberate, env-driven choice, not a code edit.
-        self.gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash").strip()
+        self.gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
 
         # Base URL for the Gemini REST API (overridable for testing/proxies).
         self.gemini_base_url: str = os.getenv(

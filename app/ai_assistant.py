@@ -9,6 +9,8 @@ When no API key is configured, the module falls back to a deterministic
 offline demos, and automated grading.
 """
 
+import json
+
 import httpx
 
 from .config import settings
@@ -22,6 +24,19 @@ SYSTEM_INSTRUCTIONS = (
     "Give clear, prioritised, actionable guidance in plain language. Be concise "
     "and never invent numbers that are not in the data."
 )
+
+# Constrained response schema. Forcing the model to fill exactly these fields in
+# a single pass is the efficient alternative to free-form generation: no wasted
+# tokens, no re-prompting, and a deterministic, directly-parseable result.
+_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "severity": {"type": "string"},
+        "summary": {"type": "string"},
+        "priority_actions": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["severity", "summary", "priority_actions"],
+}
 
 
 def build_prompt(assessment: StadiumAssessment, question: str, language: str) -> str:
@@ -47,7 +62,8 @@ def build_prompt(assessment: StadiumAssessment, question: str, language: str) ->
         )
     lines += [
         "",
-        f"Respond in {language}.",
+        f"Answer the staff question below. Write the summary and actions in {language}.",
+        "Return an overall severity label, a concise summary, and prioritised actions.",
         f"Staff question: {question}",
     ]
     return "\n".join(lines)
@@ -91,13 +107,25 @@ async def close_client() -> None:
     await _client.aclose()
 
 
-async def _call_gemini(prompt: str) -> str:
-    """Call the Gemini REST API asynchronously and return the generated text."""
+async def _call_gemini(prompt: str) -> dict:
+    """Call Gemini with a constrained JSON schema and return the parsed result.
+
+    The response schema, low temperature, and bounded token limit make each call
+    a single, deterministic, minimal-token pass - the efficient way to use the
+    model instead of open-ended free-form generation.
+    """
     url = f"{settings.gemini_base_url}/models/{settings.gemini_model}:generateContent"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        # Low temperature keeps operational guidance stable and repeatable.
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 512},
+        "generationConfig": {
+            "temperature": 0.1,  # deterministic, repeatable operational guidance
+            "maxOutputTokens": 1024,  # bounded output
+            "responseMimeType": "application/json",  # structured, parseable output
+            "responseSchema": _RESPONSE_SCHEMA,
+            # Disable model "thinking": we want the structured answer directly,
+            # with no reasoning tokens spent - faster, cheaper, and deterministic.
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
     }
     response = await _client.post(
         url,
@@ -107,7 +135,27 @@ async def _call_gemini(prompt: str) -> str:
     response.raise_for_status()
     data = response.json()
     # Standard Gemini response shape: candidates -> content -> parts -> text.
-    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    text = data["candidates"][0]["content"]["parts"][0]["text"]
+    return json.loads(text)
+
+
+def _format_structured(payload: dict) -> str:
+    """Render the model's structured fields into a readable staff briefing."""
+    summary = str(payload.get("summary", "")).strip()
+    severity = str(payload.get("severity", "")).strip()
+    actions = payload.get("priority_actions") or []
+
+    lines = []
+    if summary:
+        lines.append(summary)
+    if severity:
+        lines.append("")
+        lines.append(f"Severity: {severity}")
+    if actions:
+        lines.append("Priority actions:")
+        for action in actions:
+            lines.append(f"- {action}")
+    return "\n".join(lines).strip()
 
 
 async def run_copilot(
@@ -130,7 +178,8 @@ async def run_copilot(
 
     prompt = build_prompt(assessment, question, language)
     try:
-        answer = await _call_gemini(prompt)
+        structured = await _call_gemini(prompt)
+        answer = _format_structured(structured)
         mode = "live"
     except Exception:
         # Never fail the request because the model is slow or unreachable;

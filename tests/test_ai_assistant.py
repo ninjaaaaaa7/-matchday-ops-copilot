@@ -15,7 +15,7 @@ def test_build_prompt_contains_key_facts():
     # The prompt must ground the model in the real data and honour the language.
     assert assessment.stadium in prompt
     assert "Where is the biggest risk?" in prompt
-    assert "Respond in Spanish" in prompt
+    assert "Spanish" in prompt
 
 
 def test_demo_mode_returns_grounded_answer(monkeypatch):
@@ -36,9 +36,22 @@ def test_live_mode_parses_model_response(monkeypatch):
             return None
 
         def json(self):
+            # The live path expects the model to return schema-constrained JSON.
             return {
                 "candidates": [
-                    {"content": {"parts": [{"text": "Prioritise the transit hub."}]}}
+                    {
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": (
+                                        '{"severity": "High", '
+                                        '"summary": "Prioritise the transit hub.", '
+                                        '"priority_actions": ["Divert arrivals"]}'
+                                    )
+                                }
+                            ]
+                        }
+                    }
                 ]
             }
 
@@ -51,7 +64,8 @@ def test_live_mode_parses_model_response(monkeypatch):
 
     result = asyncio.run(run_copilot(sample_state(), "What now?", "English"))
     assert result.mode == "live"
-    assert result.answer == "Prioritise the transit hub."
+    assert "Prioritise the transit hub." in result.answer
+    assert "Divert arrivals" in result.answer
 
 
 def test_live_mode_falls_back_on_error(monkeypatch):

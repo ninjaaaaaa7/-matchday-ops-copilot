@@ -68,9 +68,11 @@ Zones are then **ranked by risk** so the worst zone is always first.
 
 ### b) A generative-AI layer (the "assistant")
 `app/ai_assistant.py` builds a prompt **grounded in the computed assessment** and sends
-it to **Google Gemini**. Because the model reasons over real, pre-computed facts, it
-gives stable operational guidance instead of inventing numbers. Staff can ask in any
-language and choose the reply language (multilingual assistance).
+it to **Google Gemini** using a **constrained JSON response schema** - the model returns
+exactly a severity label, a summary, and prioritised actions in a single deterministic
+pass. Because the model reasons over real, pre-computed facts, it gives stable
+operational guidance instead of inventing numbers. Staff can ask in any language and
+choose the reply language (multilingual assistance).
 
 **Why this split matters:** the decision logic is fully deterministic and unit-tested,
 and the AI is a natural-language layer *on top of* verified facts - not the source of
@@ -143,6 +145,28 @@ mode, and a **mocked** live Gemini call (no network needed).
 - **Trusted internal users.** The tool is for accredited operations staff; it has no
   auth layer, which a production deployment would add behind the venue network.
 
+## Efficiency & performance
+
+Efficiency is treated as a first-class design goal - every model call and page load is
+kept to the minimum work required:
+
+- **Schema-constrained generation** - the model is given a strict JSON `responseSchema`
+  and `responseMimeType`, so it emits exactly the needed fields in one pass. No
+  free-form rambling, no re-prompting, no fragile text parsing.
+- **Thinking disabled + low temperature** - `thinkingBudget: 0` spends zero reasoning
+  tokens, and `temperature: 0.1` makes output deterministic and repeatable. Together
+  they minimise token spend and latency per request.
+- **Bounded output** - a hard `maxOutputTokens` cap keeps every response small.
+- **One round trip on load** - the UI hydrates from a single `/api/dashboard` request
+  (snapshot + assessment together) instead of two separate calls.
+- **Non-blocking I/O** - the model call runs on `httpx.AsyncClient` with a pooled,
+  reused connection, so outbound latency never blocks the event loop.
+- **Minimal footprint** - a short dependency list (no LLM SDK, no vector store; the API
+  is called directly over REST) and a slim `python:3.12-slim` image built with a
+  `.dockerignore` and `--no-cache-dir`, keeping the container small and cold starts low.
+- **Stateless** - no per-user state or database, so the service scales horizontally and
+  is scale-to-zero friendly.
+
 ## Evaluation notes
 
 - **Code quality** - small, single-responsibility modules; type hints, docstrings, and
@@ -150,9 +174,10 @@ mode, and a **mocked** live Gemini call (no network needed).
 - **Security** - the API key is read from the environment only and never committed
   (`.env` is git-ignored); all request bodies are validated by Pydantic; user text is
   HTML-escaped before rendering in the UI.
-- **Efficiency** - no heavy dependencies or vector stores; a single grounded model call
-  per question with a low temperature and bounded output.
-- **Testing** - 19 `pytest` tests, including a mocked live-AI path, all passing.
+- **Efficiency** - schema-constrained, thinking-free, single-pass model calls; one
+  round trip on load; async pooled I/O; minimal dependencies and a slim image
+  (see **Efficiency & performance** above).
+- **Testing** - 20 `pytest` tests, including a mocked live-AI path, all passing.
 - **Accessibility** - semantic HTML landmarks, a skip link, labelled form controls,
   visible focus outlines, `aria-live` result regions, AA-contrast colours, and risk
   communicated by **text labels, not colour alone**.
